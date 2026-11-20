@@ -1,12 +1,16 @@
 import VectorTileLayer from "@arcgis/core/layers/VectorTileLayer.js";
 // import TileLayer from "@arcgis/core/layers/TileLayer.js"; // hillshade disabled
 
-// Shared basemap for the Events and Grid maps:
-// unlabelled dark world map, faint country boundaries, and a filtered place-name layer on top.
+// Shared basemap for the Events, Grid and El Niño maps:
+// unlabelled dark world map, faint water/road detail (no boundary lines), and a filtered place-name layer on top.
 const BASE_STYLE_URL =
   "https://cdn.arcgis.com/sharing/rest/content/items/d7397603e9274052808839b70812be50/resources/styles/root.json";
 const BOUNDARIES_STYLE_URL =
   "https://cdn.arcgis.com/sharing/rest/content/items/e8ecee3086f34b06b85229d832a1c14a/resources/styles/root.json";
+
+// Style layers in the detail layer that draw country/admin boundary lines (incl. disputed).
+// Hidden on every map; the rest of the detail layer (water, roads, rail) stays.
+const BOUNDARY_LINES = /^Boundary line\//;
 
 // Hillshade disabled for now (looked like a patina over the dark basemap).
 // To re-enable: uncomment the TileLayer import, these settings and the `hillshade` layer below,
@@ -69,6 +73,20 @@ function createLabelsLayer() {
   return labels;
 }
 
+function createDetailLayer() {
+  const detail = new VectorTileLayer({
+    url: BOUNDARIES_STYLE_URL,
+    title: "boundaries",
+    opacity: 0.25,
+  });
+  detail.when(() => {
+    for (const { id } of detail.currentStyleInfo.style.layers as { id: string }[]) {
+      if (BOUNDARY_LINES.test(id)) detail.setStyleLayerVisibility(id, "none");
+    }
+  });
+  return detail;
+}
+
 // Returns new layer instances on every call: an ArcGIS layer can only belong to one map,
 // and Events applies blur effects to its base layer that must not leak into Grid.
 // Kept as ordinary map layers (not an ArcGIS Basemap) so Events can slot its exposure
@@ -85,10 +103,6 @@ export function createBasemapLayers() {
     //   blendMode: HILLSHADE_BLEND,
     //   opacity: HILLSHADE_OPACITY,
     // }),
-    boundaries: new VectorTileLayer({
-      url: BOUNDARIES_STYLE_URL,
-      title: "boundaries",
-      opacity: 0.25,
-    }),
+    boundaries: createDetailLayer(),
   };
 }
