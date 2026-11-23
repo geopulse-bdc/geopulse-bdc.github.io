@@ -904,6 +904,8 @@ function Events() {
     newQuery.returnGeometry = true;
     newQuery.outFields = ["*"];
     newQuery.where = `eventid = ${eventid}`;
+    // simplify polygons server-side; units are metres (layer is Web Mercator), ~0.01 degrees
+    newQuery.maxAllowableOffset = 1000;
 
     // points and lines are optional extras: if their query fails the polygons still show
     const extrasQuery = { where: `eventid = ${eventid}`, outFields: ["*"], returnGeometry: true };
